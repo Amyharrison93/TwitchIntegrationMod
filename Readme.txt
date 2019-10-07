@@ -9,6 +9,7 @@ Commands:
 	!colour
 
 Setup:
-    Add your credentials (Bot Username, Channel Name, OAuth Token) through the Synth Riders Menu or manually to twith.auth.bin in the Synth Riders directory.
+    Add your credentials (Bot Username, Channel Name, OAuth Token) through the Synth Riders Menu 
+    or manually to twith.auth.bin in the Synth Riders directory
 
 
