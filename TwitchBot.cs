@@ -96,7 +96,6 @@ namespace TwitchIntegrationScript
                     AddRequest(e.Command.ArgumentsAsList);
                     break;
                 default:
-                    SendMessage("Unknown command");
                     break;
             }
         }
