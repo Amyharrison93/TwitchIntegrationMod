@@ -40,6 +40,11 @@ namespace TwitchIntegrationScript
             log("TwitchColorMod unloaded");
         }
 
+        public override void OnModUpdate()
+        {
+            TwitchBot.Update();
+        }
+
         public void SetLoadedTracks(List<TrackData> tracks)
         {
             RequestButton.Tracks = tracks;
@@ -58,7 +63,10 @@ namespace TwitchIntegrationScript
 
         public void SetUserSelectedColors(Color leftHandColor, Color rightHandColor, Color oneHandSpecialColor, Color bothHandSpecialColor)
         {
-
+            TwitchBot.leftColor = leftHandColor;
+            TwitchBot.rightColor = rightHandColor;
+            TwitchBot.oneColor = oneHandSpecialColor;
+            TwitchBot.twoColor = bothHandSpecialColor;
         }
 
         public void SetCurrentSongSelected(int CurrentSong)

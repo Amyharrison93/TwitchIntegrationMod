@@ -21,18 +21,39 @@ namespace TwitchIntegrationScript
 
         private static Client client;
 
-        private static float timelast = 0;
+        private static float timelast;
 
-        private static List<Material> sharedMaterials;
+        //private static List<Material> sharedMaterials;
+        private static Material leftMaterial;
+        private static Material rightMaterial;
+
+        private static Material leftIndicator;
+        private static Material rightIndicator;
 
         public static List<TrackData> tracks;
 
-        public static List<string> queue = new List<string>();
+        public static List<string> queue;
 
-        private static Credentials mycredentials = new Credentials();
+        private static Credentials mycredentials;
+
+        public static Color leftColor;
+        public static Color rightColor;
+        public static Color twoColor;
+        public static Color oneColor;
+
+        private static Color mleftColor;
+        private static Color mrightColor;
 
         public static void Setup()
         {
+            colorEnabled = false;
+
+            timelast = 0;
+
+            queue = new List<string>();
+
+            tracks = null;
+
             //get file path
             var dataPath = Application.dataPath;
             var filePath = dataPath.Substring(0, dataPath.LastIndexOf('/')) + "/twith.auth.bin";
@@ -64,6 +85,18 @@ namespace TwitchIntegrationScript
             client.Connect();
         }
 
+        public static void Update()
+        {
+            if (mleftColor != null && mrightColor != null && leftIndicator != null && rightIndicator)
+            {
+                if (leftIndicator.GetColor("_EmissionColor") != mleftColor || rightIndicator.GetColor("_EmissionColor") != mrightColor)
+                {
+                    leftIndicator.SetColor("_EmissionColor", mleftColor);
+                    rightIndicator.SetColor("_EmissionColor", mrightColor);
+                }
+            }
+        }
+
         private static void OnLog(object sender, OnLogArgs e)
         {
             log(e.Data);
@@ -76,6 +109,7 @@ namespace TwitchIntegrationScript
 
         private static void OnChatCommandReceived(object sender, TwitchLib.Client.Events.OnChatCommandReceivedArgs e)
         {
+            log("Command " + e.Command.CommandText);
             switch (e.Command.CommandText)
             {
                 case "Colour":
@@ -88,8 +122,6 @@ namespace TwitchIntegrationScript
                 case "queue":
                     PrintQueue();
                     break;
-                case "SR":
-                case "sr":
                 case "SRR":
                 case "srr":
                     log("Request: " + e.Command.ArgumentsAsString);
@@ -143,6 +175,7 @@ namespace TwitchIntegrationScript
                             c.Add(t);
                         }
                     }
+
                     if (c.Count > 0)
                     {
                         if (c.Count > 1)
@@ -182,54 +215,69 @@ namespace TwitchIntegrationScript
 
         public static void GetMaterials()
         {
-            try
+            GameObject notesParent = GameObject.Find("[SongTrack]");
+            int count = notesParent.transform.GetChild(0).transform.childCount;
+
+            for (int i = 0; i < count; i++)
             {
-                sharedMaterials = new List<Material>();
-                GameObject notesParent = GameObject.Find("[SongTrack]");
-                int count = notesParent.transform.GetChild(0).transform.childCount;
+                Transform note = notesParent.transform.GetChild(0).transform.GetChild(i);
 
-                for (int i = 0; i < count; i++)
+                MeshRenderer[] mrs = note.GetComponentsInChildren<MeshRenderer>(true);
+
+                if (mrs[0].sharedMaterial != null)
                 {
-                    Transform note = notesParent.transform.GetChild(0).transform.GetChild(i);
-
-                    MeshRenderer[] mrs = note.GetComponentsInChildren<MeshRenderer>(true);
-
-                    if (mrs != null && mrs.Length > 0)
+                    if (mrs[0].sharedMaterial.GetColor("_EmissionColor") == leftColor)
                     {
-                        if (mrs[0].sharedMaterial != null && !sharedMaterials.Contains(mrs[0].sharedMaterial))
-                        {
-                            sharedMaterials.Add(mrs[0].sharedMaterial);
-                        }
+                        leftMaterial = mrs[0].sharedMaterial;
+                    }
+                    else if (mrs[0].sharedMaterial.GetColor("_EmissionColor") == rightColor)
+                    {
+                        rightMaterial = mrs[0].sharedMaterial;
                     }
                 }
             }
-            catch { }
+
+            leftIndicator = GameObject.Find("Left Indicator").GetComponentsInChildren<MeshRenderer>()[0].sharedMaterial;
+            rightIndicator = GameObject.Find("Right Indicator").GetComponentsInChildren<MeshRenderer>()[0].sharedMaterial;
+
         }
 
         private static void ChangeColor()
         {
             if (colorEnabled)
             {
-                if (sharedMaterials == null || sharedMaterials.Count == 0)
+                if (leftMaterial == null || rightMaterial == null || leftIndicator == null || rightIndicator == null)
                 {
                     GetMaterials();
                 }
 
-                if (Time.time - timelast > 15)
+                if (Time.time - timelast > 15 && leftMaterial != null && rightMaterial != null && leftIndicator != null && rightIndicator != null)
                 {
                     SendMessage("Randomizing Color");
                     timelast = Time.time;
 
                     int rand = UnityEngine.Random.Range(0, 1000);
 
-                    foreach (Material m in sharedMaterials)
+                    Color col = Color.HSVToRGB(rand / 1000f, 1, 1);
+                    if (col == leftColor)
                     {
                         rand = (rand + 611) % 1000;
-
-                        Color col = Color.HSVToRGB(rand / 1000f, 1, 1);
-
-                        m.SetColor("_EmissionColor", col);
+                        col = Color.HSVToRGB(rand / 1000f, 1, 1);
                     }
+                    mleftColor = col;
+                    leftMaterial.SetColor("_EmissionColor", col);
+                    leftIndicator.SetColor("_EmissionColor", col);
+
+                    rand = (rand + 611) % 1000;
+                    col = Color.HSVToRGB(rand / 1000f, 1, 1);
+                    if (col == rightColor)
+                    {
+                        rand = (rand + 611) % 1000;
+                        col = Color.HSVToRGB(rand / 1000f, 1, 1);
+                    }
+                    mrightColor = col;
+                    rightMaterial.SetColor("_EmissionColor", col);
+                    rightIndicator.SetColor("_EmissionColor", col);
                 }
                 else
                 {
