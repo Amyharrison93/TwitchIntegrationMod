@@ -23,7 +23,6 @@ namespace TwitchIntegrationScript
 
         private static float timelast;
 
-        //private static List<Material> sharedMaterials;
         private static Material leftMaterial;
         private static Material rightMaterial;
 
@@ -43,6 +42,10 @@ namespace TwitchIntegrationScript
 
         private static Color mleftColor;
         private static Color mrightColor;
+
+        public static Action<float> setPitchCallback;
+        public static Action looseLifeCallback;
+
 
         public static void Setup()
         {
@@ -122,6 +125,14 @@ namespace TwitchIntegrationScript
                 case "queue":
                     PrintQueue();
                     break;
+                case "Speed":
+                case "speed":
+                    ChangeSpeed();
+                    break;
+                case "Hit":
+                case "hit":
+                    looseLifeCallback();
+                    break;
                 case "SRR":
                 case "srr":
                     log("Request: " + e.Command.ArgumentsAsString);
@@ -130,6 +141,12 @@ namespace TwitchIntegrationScript
                 default:
                     break;
             }
+        }
+
+        public static void ChangeSpeed()
+        {
+            setPitchCallback(2.5f);
+            SendMessage("Speeding up!!!");
         }
 
         public static void PrintQueue()

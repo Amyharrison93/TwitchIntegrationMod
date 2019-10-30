@@ -156,7 +156,7 @@ namespace TwitchIntegrationScript
 
         public void SetLoseLifeCallback(Action callback)
         {
- 
+            TwitchBot.looseLifeCallback = callback;
         }
 
         public void SetSongModifier(Action<int[]> callback)
@@ -166,7 +166,7 @@ namespace TwitchIntegrationScript
 
         public void SetSongPitchCallback(Action<float> callback)
         {
-           
+            TwitchBot.setPitchCallback = callback;
         }
     }
 }
