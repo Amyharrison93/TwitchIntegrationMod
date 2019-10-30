@@ -145,5 +145,20 @@ namespace TwitchIntegrationScript
                 streamWriter.WriteLine(str);
             }
         }
+
+        public void SetLoseLifeCallback(Action callback)
+        {
+ 
+        }
+
+        public void SetSongModifier(Action<int[]> callback)
+        {
+           
+        }
+
+        public void SetSongPitchCallback(Action<float> callback)
+        {
+           
+        }
     }
 }
