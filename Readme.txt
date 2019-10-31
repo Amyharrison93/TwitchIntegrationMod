@@ -1,7 +1,6 @@
 Commands:
     Add Request:
 	!srr <Song Name>
-	!sr <Song Name>
     Print Queue:
 	!queue
     Randomize Color:
