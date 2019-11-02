@@ -10,18 +10,26 @@ using System;
 using TwitchLib.Client.Events;
 using Synth.mods.interactions;
 using Synth.mods.events;
-
+using System.Collections;
 
 namespace TwitchIntegrationScript
 {
-    public class TwitchBot
+    public class TwitchBot : MonoBehaviour
     {
 
-        public static bool colorEnabled = false;
+        private const float duration = 20f;
+
+        public static GameObject platform;
+
+        public static GameObject userText;
+
+        public static bool modificationEnabled = false;
 
         private static Client client;
 
-        private static float timelast;
+        private static bool commandRunning;
+
+        public static bool inLevel;
 
         private static Material leftMaterial;
         private static Material rightMaterial;
@@ -46,12 +54,24 @@ namespace TwitchIntegrationScript
         public static Action<float> setPitchCallback;
         public static Action looseLifeCallback;
 
+        public static TwitchBot s_instance;
+
+        void Awake()
+        {
+            if (s_instance != null)
+            {
+                Destroy(this);
+            }
+
+            s_instance = this;
+            DontDestroyOnLoad(this);
+        }
 
         public static void Setup()
         {
-            colorEnabled = false;
+            modificationEnabled = false;
 
-            timelast = 0;
+            commandRunning = false;
 
             queue = new List<string>();
 
@@ -119,7 +139,7 @@ namespace TwitchIntegrationScript
                 case "colour":
                 case "Color":
                 case "color":
-                    ChangeColor();
+                    ColorCommand(duration, e.Command.ChatMessage.Username);
                     break;
                 case "Queue":
                 case "queue":
@@ -127,11 +147,16 @@ namespace TwitchIntegrationScript
                     break;
                 case "Speed":
                 case "speed":
-                    ChangeSpeed();
+                    SpeedCommand(1.5f, duration, e.Command.ChatMessage.Username);
                     break;
-                case "Hit":
-                case "hit":
-                    looseLifeCallback();
+                case "Superspeed":
+                case "SuperSpeed":
+                case "superspeed":
+                    SpeedCommand(2f, duration / 2, e.Command.ChatMessage.Username);
+                    break;
+                case "Slow":
+                case "slow":
+                    SpeedCommand(0.5f, duration, e.Command.ChatMessage.Username);
                     break;
                 case "SRR":
                 case "srr":
@@ -141,12 +166,6 @@ namespace TwitchIntegrationScript
                 default:
                     break;
             }
-        }
-
-        public static void ChangeSpeed()
-        {
-            setPitchCallback(2.5f);
-            SendMessage("Speeding up!!!");
         }
 
         public static void PrintQueue()
@@ -160,7 +179,7 @@ namespace TwitchIntegrationScript
             {
                 tmp += " and more";
             }
-            SendMessage(tmp);
+            SendChatMessage(tmp);
         }
 
         private static void AddRequest(List<string> request)
@@ -206,25 +225,25 @@ namespace TwitchIntegrationScript
                             {
                                 tmp += " and more";
                             }
-                            SendMessage(tmp);
+                            SendChatMessage(tmp);
                         }
                         else
                         {
                             if (!queue.Contains(c[0].name))
                             {
                                 queue.Add(c[0].name);
-                                SendMessage(c[0].name + " added to the queue");
+                                SendChatMessage(c[0].name + " added to the queue");
                                 RequestButton.UpdateText();
                             }
                             else
                             {
-                                SendMessage(c[0].name + " already in the queue");
+                                SendChatMessage(c[0].name + " already in the queue");
                             }
                         }
                     }
                     else
                     {
-                        SendMessage("No maps found");
+                        SendChatMessage("No maps found");
                     }
                 }
             }
@@ -256,58 +275,120 @@ namespace TwitchIntegrationScript
 
             leftIndicator = GameObject.Find("Left Indicator").GetComponentsInChildren<MeshRenderer>()[0].sharedMaterial;
             rightIndicator = GameObject.Find("Right Indicator").GetComponentsInChildren<MeshRenderer>()[0].sharedMaterial;
-
         }
 
-        private static void ChangeColor()
+        private static void ColorCommand(float time, string user)
         {
-            if (colorEnabled)
+            if (modificationEnabled == true && inLevel == true)
             {
                 if (leftMaterial == null || rightMaterial == null || leftIndicator == null || rightIndicator == null)
                 {
                     GetMaterials();
                 }
 
-                if (Time.time - timelast > 15 && leftMaterial != null && rightMaterial != null && leftIndicator != null && rightIndicator != null)
+                if (commandRunning == false)
                 {
-                    SendMessage("Randomizing Color");
-                    timelast = Time.time;
-
-                    int rand = UnityEngine.Random.Range(0, 1000);
-
-                    Color col = Color.HSVToRGB(rand / 1000f, 1, 1);
-                    if (col == leftColor)
-                    {
-                        rand = (rand + 611) % 1000;
-                        col = Color.HSVToRGB(rand / 1000f, 1, 1);
-                    }
-                    mleftColor = col;
-                    leftMaterial.SetColor("_EmissionColor", col);
-                    leftIndicator.SetColor("_EmissionColor", col);
-
-                    rand = (rand + 611) % 1000;
-                    col = Color.HSVToRGB(rand / 1000f, 1, 1);
-                    if (col == rightColor)
-                    {
-                        rand = (rand + 611) % 1000;
-                        col = Color.HSVToRGB(rand / 1000f, 1, 1);
-                    }
-                    mrightColor = col;
-                    rightMaterial.SetColor("_EmissionColor", col);
-                    rightIndicator.SetColor("_EmissionColor", col);
+                    SendChatMessage("Randomizing Color");
+                    s_instance.StartCoroutine(ChangeColor(time, user));
+                    ShowUser(user, 20f);
                 }
                 else
                 {
-                    SendMessage("Color command on cooldown for " + (15 - (int)(Time.time - timelast)).ToString() + " seconds");
+                    SendChatMessage("Modification already running");
                 }
             }
             else
             {
-                SendMessage("Command disabled");
+                SendChatMessage("Command disabled");
             }
         }
 
-        public static void SendMessage(string message)
+        public static IEnumerator ChangeColor(float time, string user)
+        {
+            commandRunning = true;
+
+            int rand = UnityEngine.Random.Range(0, 1000);
+
+            Color col = Color.HSVToRGB(rand / 1000f, 1, 1);
+
+            mleftColor = col;
+            leftMaterial.SetColor("_EmissionColor", col);
+            leftIndicator.SetColor("_EmissionColor", col);
+
+            rand = (rand + 611) % 1000;
+            col = Color.HSVToRGB(rand / 1000f, 1, 1);
+
+            mrightColor = col;
+            rightMaterial.SetColor("_EmissionColor", col);
+            rightIndicator.SetColor("_EmissionColor", col);
+
+            yield return new WaitForSeconds(time);
+
+            mleftColor = leftColor;
+            leftMaterial.SetColor("_EmissionColor", leftColor);
+            leftIndicator.SetColor("_EmissionColor", leftColor);
+
+            rand = (rand + 611) % 1000;
+            col = Color.HSVToRGB(rand / 1000f, 1, 1);
+
+            mrightColor = rightColor;
+            rightMaterial.SetColor("_EmissionColor", rightColor);
+            rightIndicator.SetColor("_EmissionColor", rightColor);
+
+            commandRunning = false;
+        }
+
+        public static void SpeedCommand(float speed, float time, string user)
+        {
+            if (modificationEnabled == true && inLevel == true)
+            {
+                if (commandRunning == false)
+                {
+                    SendChatMessage("Speed " + speed.ToString() + "x");
+                    ShowUser(user, 10f / speed);
+                    s_instance.StartCoroutine(ChangeSpeed(speed, time, user));
+                }
+                else
+                {
+                    SendChatMessage("Modification already running");
+                }
+            }
+            else
+            {
+                SendChatMessage("Command disabled");
+            }
+        }
+
+        public static IEnumerator ChangeSpeed(float speed, float time, string user)
+        {
+            commandRunning = true;
+            setPitchCallback(speed);
+
+            yield return new WaitForSeconds(time);
+
+            setPitchCallback(1f);
+            commandRunning = false;
+        }
+
+        public static void ShowUser(string user, float time)
+        {
+            s_instance.StartCoroutine(ChangeUser(user, time));
+        }
+
+        public static IEnumerator ChangeUser(string user, float time)
+        {
+            GameObject platform = GameObject.Find("HeadsetFollower");
+            userText.transform.position = platform.transform.position;
+
+            UserTextScript.SetText(user);
+            UserTextScript.ShowMe();
+
+            yield return new WaitForSeconds(time);
+
+            UserTextScript.HideMe();
+        }
+
+        public static void SendChatMessage(string message)
         {
             client.SendMessage(mycredentials.Channel, "[Bot] " + message);
         }

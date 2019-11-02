@@ -18,6 +18,7 @@ namespace TwitchIntegrationScript
         public override void OnModLoaded()
         {
             GameObject obj = ModAssets.Instantiate<GameObject>("RequestButton_pre");
+            TwitchBot.userText = ModAssets.Instantiate<GameObject>("UserText");
             TwitchBot.Setup();
             log("TwitchColorMod loaded");
         }
@@ -103,12 +104,12 @@ namespace TwitchIntegrationScript
 
         public void OnGameStageLoaded(TrackData trackData)
         {
-
+            TwitchBot.inLevel = true;
         }
 
         public void OnGameStageUnloaded()
         {
-            
+            TwitchBot.inLevel = false;
         }
 
         public void OnScoreStageLoaded()

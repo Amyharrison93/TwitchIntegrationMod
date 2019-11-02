@@ -72,7 +72,6 @@ namespace TwitchIntegrationScript
             }
         }
 
-        // Use this for initialization
         void Awake()
         {
             if (s_instance != null)
@@ -165,15 +164,15 @@ namespace TwitchIntegrationScript
 
         public static void ToggleColor()
         {
-            TwitchBot.colorEnabled = !TwitchBot.colorEnabled;
+            TwitchBot.modificationEnabled = !TwitchBot.modificationEnabled;
 
-            if (TwitchBot.colorEnabled)
+            if (TwitchBot.modificationEnabled)
             {
-                s_instance.colorText.text = "!Color on";
+                s_instance.colorText.text = "!Mods on";
             }
             else
             {
-                s_instance.colorText.text = "!Color off";
+                s_instance.colorText.text = "!Mods off";
             }
         }
 
