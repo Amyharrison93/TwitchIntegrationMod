@@ -19,6 +19,13 @@ namespace TwitchIntegrationScript
 
         private const float duration = 20f;
 
+        private static float colorTime = 0;
+        private static bool colorRunning = false;
+        private static float speedTime = 0;
+        private static bool speedRunning = false;
+        private static float nameTime = 0;
+        private static bool nameRunning = false;
+
         public static GameObject platform;
 
         public static GameObject userText;
@@ -26,8 +33,6 @@ namespace TwitchIntegrationScript
         public static bool modificationEnabled = false;
 
         private static Client client;
-
-        private static bool commandRunning;
 
         public static bool inLevel;
 
@@ -48,8 +53,8 @@ namespace TwitchIntegrationScript
         public static Color twoColor;
         public static Color oneColor;
 
-        private static Color mleftColor;
-        private static Color mrightColor;
+        public static Color mleftColor;
+        public static Color mrightColor;
 
         public static Action<float> setPitchCallback;
         public static Action looseLifeCallback;
@@ -65,13 +70,20 @@ namespace TwitchIntegrationScript
 
             s_instance = this;
             DontDestroyOnLoad(this);
+
+            Setup();
         }
 
         public static void Setup()
         {
             modificationEnabled = false;
 
-            commandRunning = false;
+            colorTime = 0;
+            colorRunning = false;
+            speedTime = 0;
+            speedRunning = false;
+            nameTime = 0;
+            nameRunning = false;
 
             queue = new List<string>();
 
@@ -108,15 +120,57 @@ namespace TwitchIntegrationScript
             client.Connect();
         }
 
-        public static void Update()
+        public void Update()
         {
-            if (mleftColor != null && mrightColor != null && leftIndicator != null && rightIndicator)
+            if (s_instance == null) { return; }
+
+            try
             {
-                if (leftIndicator.GetColor("_EmissionColor") != mleftColor || rightIndicator.GetColor("_EmissionColor") != mrightColor)
+                if (mleftColor != null && mrightColor != null && leftIndicator != null && rightIndicator != null)
                 {
-                    leftIndicator.SetColor("_EmissionColor", mleftColor);
-                    rightIndicator.SetColor("_EmissionColor", mrightColor);
+                    if (leftIndicator.GetColor("_EmissionColor") != mleftColor || rightIndicator.GetColor("_EmissionColor") != mrightColor)
+                    {
+                        leftIndicator.SetColor("_EmissionColor", mleftColor);
+                        rightIndicator.SetColor("_EmissionColor", mrightColor);
+                    }
                 }
+
+                float time = Time.time;
+
+                if (colorRunning)
+                {
+                    if (colorTime - time < 0 && colorTime - time > -60)
+                    {
+                        mleftColor = leftColor;
+                        leftMaterial.SetColor("_EmissionColor", leftColor);
+                        leftIndicator.SetColor("_EmissionColor", leftColor);
+
+                        mrightColor = rightColor;
+                        rightMaterial.SetColor("_EmissionColor", rightColor);
+                        rightIndicator.SetColor("_EmissionColor", rightColor);
+                        colorRunning = false;
+                    }
+                }
+                if (speedRunning)
+                {
+                    if (speedTime - time < 0 && speedTime - time > -60)
+                    {
+                        setPitchCallback(1f);
+                        speedRunning = false;
+                    }
+                }
+                if (nameRunning)
+                {
+                    if (nameTime - time < 0 && nameTime - time > -60)
+                    {
+                        UserTextScript.HideMe();
+                        nameRunning = false;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                log(e.Message);
             }
         }
 
@@ -147,15 +201,16 @@ namespace TwitchIntegrationScript
                     break;
                 case "Speed":
                 case "speed":
-                    SpeedCommand(1.5f, duration, e.Command.ChatMessage.Username);
+                    SpeedCommand(1.25f, duration, e.Command.ChatMessage.Username);
                     break;
                 case "Superspeed":
                 case "SuperSpeed":
                 case "superspeed":
-                    SpeedCommand(2f, duration / 2, e.Command.ChatMessage.Username);
+                    SpeedCommand(1.5f, duration / 2, e.Command.ChatMessage.Username);
                     break;
-                case "Slow":
-                case "slow":
+                case "Timewarp":
+                case "TimeWarp":
+                case "timewarp":
                     SpeedCommand(0.5f, duration, e.Command.ChatMessage.Username);
                     break;
                 case "SRR":
@@ -279,79 +334,50 @@ namespace TwitchIntegrationScript
 
         private static void ColorCommand(float time, string user)
         {
-            if (modificationEnabled == true && inLevel == true)
+            if (modificationEnabled && inLevel && !colorRunning)
             {
                 if (leftMaterial == null || rightMaterial == null || leftIndicator == null || rightIndicator == null)
                 {
                     GetMaterials();
                 }
 
-                if (commandRunning == false)
-                {
-                    SendChatMessage("Randomizing Color");
-                    s_instance.StartCoroutine(ChangeColor(time, user));
-                    ShowUser(user, 20f);
-                }
-                else
-                {
-                    SendChatMessage("Modification already running");
-                }
+                SendChatMessage("Randomizing Color");
+                NameCommand(user, 20f);
+                colorTime = Time.time + time;
+                colorRunning = true;
+
+                int rand = UnityEngine.Random.Range(0, 1000);
+
+                Color col = Color.HSVToRGB(rand / 1000f, 1, 1);
+
+                mleftColor = col;
+                leftMaterial.SetColor("_EmissionColor", col);
+                leftIndicator.SetColor("_EmissionColor", col);
+
+                rand = (rand + 611) % 1000;
+                col = Color.HSVToRGB(rand / 1000f, 1, 1);
+
+                mrightColor = col;
+                rightMaterial.SetColor("_EmissionColor", col);
+                rightIndicator.SetColor("_EmissionColor", col);
+
             }
             else
             {
                 SendChatMessage("Command disabled");
             }
-        }
-
-        public static IEnumerator ChangeColor(float time, string user)
-        {
-            commandRunning = true;
-
-            int rand = UnityEngine.Random.Range(0, 1000);
-
-            Color col = Color.HSVToRGB(rand / 1000f, 1, 1);
-
-            mleftColor = col;
-            leftMaterial.SetColor("_EmissionColor", col);
-            leftIndicator.SetColor("_EmissionColor", col);
-
-            rand = (rand + 611) % 1000;
-            col = Color.HSVToRGB(rand / 1000f, 1, 1);
-
-            mrightColor = col;
-            rightMaterial.SetColor("_EmissionColor", col);
-            rightIndicator.SetColor("_EmissionColor", col);
-
-            yield return new WaitForSeconds(time);
-
-            mleftColor = leftColor;
-            leftMaterial.SetColor("_EmissionColor", leftColor);
-            leftIndicator.SetColor("_EmissionColor", leftColor);
-
-            rand = (rand + 611) % 1000;
-            col = Color.HSVToRGB(rand / 1000f, 1, 1);
-
-            mrightColor = rightColor;
-            rightMaterial.SetColor("_EmissionColor", rightColor);
-            rightIndicator.SetColor("_EmissionColor", rightColor);
-
-            commandRunning = false;
         }
 
         public static void SpeedCommand(float speed, float time, string user)
         {
-            if (modificationEnabled == true && inLevel == true)
+            if (modificationEnabled && inLevel && !speedRunning)
             {
-                if (commandRunning == false)
-                {
-                    SendChatMessage("Speed " + speed.ToString() + "x");
-                    ShowUser(user, 10f / speed);
-                    s_instance.StartCoroutine(ChangeSpeed(speed, time, user));
-                }
-                else
-                {
-                    SendChatMessage("Modification already running");
-                }
+                SendChatMessage("Speed " + speed.ToString() + "x");
+                NameCommand(user, 10f / speed);
+                speedTime = Time.time + time;
+                speedRunning = true;
+
+                setPitchCallback(speed);
             }
             else
             {
@@ -359,33 +385,16 @@ namespace TwitchIntegrationScript
             }
         }
 
-        public static IEnumerator ChangeSpeed(float speed, float time, string user)
+        public static void NameCommand(string user, float time)
         {
-            commandRunning = true;
-            setPitchCallback(speed);
+            nameTime = Time.time + time;
+            nameRunning = true;
 
-            yield return new WaitForSeconds(time);
-
-            setPitchCallback(1f);
-            commandRunning = false;
-        }
-
-        public static void ShowUser(string user, float time)
-        {
-            s_instance.StartCoroutine(ChangeUser(user, time));
-        }
-
-        public static IEnumerator ChangeUser(string user, float time)
-        {
             GameObject platform = GameObject.Find("HeadsetFollower");
             userText.transform.position = platform.transform.position;
 
             UserTextScript.SetText(user);
             UserTextScript.ShowMe();
-
-            yield return new WaitForSeconds(time);
-
-            UserTextScript.HideMe();
         }
 
         public static void SendChatMessage(string message)
