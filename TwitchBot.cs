@@ -17,20 +17,16 @@ namespace TwitchIntegrationScript
     public class TwitchBot : MonoBehaviour
     {
 
-        private const float duration = 20f;
+        public static Settings settings;
 
-        private static float colorTime = 0;
-        private static bool colorRunning = false;
-        private static float speedTime = 0;
-        private static bool speedRunning = false;
-        private static float nameTime = 0;
-        private static bool nameRunning = false;
-
-        public static GameObject platform;
+        private static float colorTime;
+        private static bool colorRunning;
+        private static float speedTime;
+        private static bool speedRunning;
+        private static float nameTime;
+        private static bool nameRunning;
 
         public static GameObject userText;
-
-        public static bool modificationEnabled = false;
 
         private static Client client;
 
@@ -42,7 +38,7 @@ namespace TwitchIntegrationScript
         private static Material leftIndicator;
         private static Material rightIndicator;
 
-        public static List<TrackData> tracks;
+        public static List<string> tracks;
 
         public static List<string> queue;
 
@@ -50,8 +46,6 @@ namespace TwitchIntegrationScript
 
         public static Color leftColor;
         public static Color rightColor;
-        public static Color twoColor;
-        public static Color oneColor;
 
         public static Color mleftColor;
         public static Color mrightColor;
@@ -76,8 +70,6 @@ namespace TwitchIntegrationScript
 
         public static void Setup()
         {
-            modificationEnabled = false;
-
             colorTime = 0;
             colorRunning = false;
             speedTime = 0;
@@ -91,11 +83,31 @@ namespace TwitchIntegrationScript
 
             //get file path
             var dataPath = Application.dataPath;
-            var filePath = dataPath.Substring(0, dataPath.LastIndexOf('/')) + "/twith.auth.bin";
+            var credentialsPath = dataPath.Substring(0, dataPath.LastIndexOf('/')) + "/twith.auth.bin";
+            var settingsPath = dataPath.Substring(0, dataPath.LastIndexOf('/')) + "/TwitchSettings.json";
+
+            if (File.Exists(settingsPath))
+            {
+                //load  
+                string str = "";
+                using (StreamReader streamReader = new StreamReader(settingsPath))
+                {
+                    str = streamReader.ReadToEnd();
+                }
+
+                //deserialize
+                settings = JsonUtility.FromJson<Settings>(str);
+            }
+            else
+            {
+                settings = new Settings();
+            }
+
+            RequestButton.UpdateButtons();
 
             //load  
             string text = "";
-            using (StreamReader streamReader = new StreamReader(filePath))
+            using (StreamReader streamReader = new StreamReader(credentialsPath))
             {
                 text = streamReader.ReadToEnd();
             }
@@ -124,22 +136,27 @@ namespace TwitchIntegrationScript
         {
             if (s_instance == null) { return; }
 
-            try
+            if (mleftColor != null && mrightColor != null && leftIndicator != null && rightIndicator != null)
             {
-                if (mleftColor != null && mrightColor != null && leftIndicator != null && rightIndicator != null)
+                if (leftIndicator.GetColor("_EmissionColor") != mleftColor || rightIndicator.GetColor("_EmissionColor") != mrightColor)
                 {
-                    if (leftIndicator.GetColor("_EmissionColor") != mleftColor || rightIndicator.GetColor("_EmissionColor") != mrightColor)
-                    {
-                        leftIndicator.SetColor("_EmissionColor", mleftColor);
-                        rightIndicator.SetColor("_EmissionColor", mrightColor);
-                    }
+                    leftIndicator.SetColor("_EmissionColor", mleftColor);
+                    rightIndicator.SetColor("_EmissionColor", mrightColor);
                 }
+            }
 
-                float time = Time.time;
+            float time = Time.time;
 
-                if (colorRunning)
+            if (colorRunning)
+            {
+                if (colorTime - time < 0 && colorTime - time > -60)
                 {
-                    if (colorTime - time < 0 && colorTime - time > -60)
+                    if (leftMaterial == null || rightMaterial == null || leftIndicator == null || rightIndicator == null)
+                    {
+                        GetMaterials();
+                    }
+
+                    if (leftMaterial != null || rightMaterial != null || leftIndicator != null || rightIndicator != null)
                     {
                         mleftColor = leftColor;
                         leftMaterial.SetColor("_EmissionColor", leftColor);
@@ -151,26 +168,22 @@ namespace TwitchIntegrationScript
                         colorRunning = false;
                     }
                 }
-                if (speedRunning)
+            }
+            if (speedRunning)
+            {
+                if (speedTime - time < 0 && speedTime - time > -60)
                 {
-                    if (speedTime - time < 0 && speedTime - time > -60)
-                    {
-                        setPitchCallback(1f);
-                        speedRunning = false;
-                    }
-                }
-                if (nameRunning)
-                {
-                    if (nameTime - time < 0 && nameTime - time > -60)
-                    {
-                        UserTextScript.HideMe();
-                        nameRunning = false;
-                    }
+                    setPitchCallback(1f);
+                    speedRunning = false;
                 }
             }
-            catch (Exception e)
+            if (nameRunning)
             {
-                log(e.Message);
+                if (nameTime - time < 0 && nameTime - time > -60)
+                {
+                    UserTextScript.HideMe();
+                    nameRunning = false;
+                }
             }
         }
 
@@ -187,13 +200,43 @@ namespace TwitchIntegrationScript
         private static void OnChatCommandReceived(object sender, TwitchLib.Client.Events.OnChatCommandReceivedArgs e)
         {
             log("Command " + e.Command.CommandText);
+
+            if (e.Command.ChatMessage.IsBroadcaster || e.Command.ChatMessage.IsModerator)
+            {
+                switch (e.Command.CommandText)
+                {
+                    case "add":
+                        log("Add: " + e.Command.ArgumentsAsString);
+                        AddRequest(e.Command.ArgumentsAsList);
+                        break;
+                    case "next":
+                        log("Next: " + e.Command.ArgumentsAsString);
+                        QueueNext(e.Command.ArgumentsAsList);
+                        break;
+                    case "remove":
+                        log("Remove: " + e.Command.ArgumentsAsString);
+                        RemoveRequest(e.Command.ArgumentsAsList);
+                        break;
+                    case "enable":
+                        SetCommand(true, e.Command.ArgumentsAsList);
+                        break;
+                    case "disable":
+                        SetCommand(false, e.Command.ArgumentsAsList);
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+
             switch (e.Command.CommandText)
             {
                 case "Colour":
                 case "colour":
                 case "Color":
                 case "color":
-                    ColorCommand(duration, e.Command.ChatMessage.Username);
+                    if (settings.colorEnabled) { ColorCommand(settings.colorDuration, e.Command.ChatMessage.Username); }
+                    else { SendChatMessage("Command disabled"); }
                     break;
                 case "Queue":
                 case "queue":
@@ -201,26 +244,75 @@ namespace TwitchIntegrationScript
                     break;
                 case "Speed":
                 case "speed":
-                    SpeedCommand(1.25f, duration, e.Command.ChatMessage.Username);
+                    if (settings.speedEnabled) { SpeedCommand(settings.speedValue, settings.speedDuration, e.Command.ChatMessage.Username); }
+                    else { SendChatMessage("Command disabled"); }
                     break;
                 case "Superspeed":
                 case "SuperSpeed":
                 case "superspeed":
-                    SpeedCommand(1.5f, duration / 2, e.Command.ChatMessage.Username);
+                    if (settings.superspeedEnabled) { SpeedCommand(settings.superspeedValue, settings.superspeedDuration, e.Command.ChatMessage.Username); }
+                    else { SendChatMessage("Command disabled"); }
                     break;
                 case "Timewarp":
                 case "TimeWarp":
                 case "timewarp":
-                    SpeedCommand(0.5f, duration, e.Command.ChatMessage.Username);
+                    if (settings.timewarpEnabled) { SpeedCommand(settings.timewarpValue, settings.timewarpDuration, e.Command.ChatMessage.Username); }
+                    else { SendChatMessage("Command disabled"); }
                     break;
                 case "SRR":
                 case "srr":
-                    log("Request: " + e.Command.ArgumentsAsString);
-                    AddRequest(e.Command.ArgumentsAsList);
+                    if (settings.queueEnabled)
+                    {
+                        log("Request: " + e.Command.ArgumentsAsString);
+                        AddRequest(e.Command.ArgumentsAsList);
+                    }
+                    else { SendChatMessage("Queue closed"); }
+
                     break;
                 default:
                     break;
             }
+        }
+
+        public static void SetCommand(bool val, List<string> parameters)
+        {
+            string str = parameters[0];
+            if (val == true)
+            {
+                str += " enabled";
+            }
+            else
+            {
+                str += " disabled";
+            }
+
+            if (parameters[0].Equals("speed"))
+            {
+                settings.speedEnabled = val;
+            }
+            else if (parameters[0].Equals("superspeed"))
+            {
+                settings.superspeedEnabled = val;
+            }
+            else if (parameters[0].Equals("timewarp"))
+            {
+                settings.timewarpEnabled = val;
+            }
+            else if (parameters[0].Equals("color"))
+            {
+                settings.colorEnabled = val;
+            }
+            else if (parameters[0].Equals("queue"))
+            {
+                settings.queueEnabled = val;
+            }
+            else if (parameters[0].Equals("reply"))
+            {
+                settings.chatReply = val;
+            }
+
+            RequestButton.UpdateButtons();
+            SendChatMessage(str);
         }
 
         public static void PrintQueue()
@@ -237,27 +329,94 @@ namespace TwitchIntegrationScript
             SendChatMessage(tmp);
         }
 
-        private static void AddRequest(List<string> request)
+        private static void AddRequest(List<string> requests)
         {
-            if (request.Count > 0)
+            string c = SearchRequests(tracks, requests);
+            if (!c.Equals(""))
+            {
+                if (!queue.Contains(c))
+                {
+                    queue.Add(c);
+                    SendChatMessage(c + " added to the queue");
+                    RequestButton.UpdateText();
+                }
+                else
+                {
+                    SendChatMessage(c + " already in the queue");
+                }
+            }
+        }
+
+        private static void QueueNext(List<string> requests)
+        {
+            string c = SearchRequests(tracks, requests);
+            if (!c.Equals(""))
+            {
+                if (queue.Contains(c))
+                {
+                    queue.Remove(c);
+                    SendChatMessage(c + " moved to the front");
+                }
+                else
+                {
+                    SendChatMessage(c + " added to the front");
+                }
+                queue.Insert(0, c);
+                RequestButton.UpdateText();
+            }
+        }
+
+        private static void RemoveRequest(List<string> requests)
+        {
+            string c = SearchRequests(queue, requests);
+            if (!c.Equals(""))
+            {
+                if (queue.Contains(c))
+                {
+                    queue.Remove(c);
+                    SendChatMessage(c + " removed from the queue");
+                    RequestButton.UpdateText();
+                }
+                else
+                {
+                    SendChatMessage(c + " already removed");
+                }
+            }
+        }
+
+        private static string SearchRequests(List<string> tracks, List<string> request)
+        {
+            if (request != null && request.Count > 0)
             {
                 if (tracks != null)
                 {
-                    int lastTrackSearchScore = 0;
-                    List<TrackData> c = new List<TrackData>();
-                    foreach (TrackData t in tracks)
+                    string par = "";
+                    for (int i = 0; i < request.Count - 1; i++)
                     {
+                        par += request[i].ToLower() + " ";
+                    }
+                    par += request[request.Count - 1].ToLower();
+
+                    int lastTrackSearchScore = 0;
+                    List<string> c = new List<string>();
+                    foreach (string t in tracks)
+                    {
+                        if (t.Equals(par))
+                        {
+                            return par;
+                        }
+
                         int x = 0;
                         foreach (string s in request)
                         {
-                            if (t.name.ToLower().Contains(s.ToLower()))
+                            if (t.Contains(s.ToLower()))
                             {
                                 x++;
                             }
                         }
                         if (x > lastTrackSearchScore)
                         {
-                            c = new List<TrackData>();
+                            c = new List<string>();
                             c.Add(t);
                             lastTrackSearchScore = x;
                         }
@@ -274,7 +433,7 @@ namespace TwitchIntegrationScript
                             string tmp = c.Count.ToString() + " alternatives found: ";
                             for (int i = 0; i < c.Count && i < 10; i++)
                             {
-                                tmp += c[i].name + ", ";
+                                tmp += c[i] + ", ";
                             }
                             if (c.Count > 10)
                             {
@@ -284,24 +443,16 @@ namespace TwitchIntegrationScript
                         }
                         else
                         {
-                            if (!queue.Contains(c[0].name))
-                            {
-                                queue.Add(c[0].name);
-                                SendChatMessage(c[0].name + " added to the queue");
-                                RequestButton.UpdateText();
-                            }
-                            else
-                            {
-                                SendChatMessage(c[0].name + " already in the queue");
-                            }
+                            return c[0];
                         }
                     }
                     else
                     {
-                        SendChatMessage("No maps found");
+                        SendChatMessage("No matches found");
                     }
                 }
             }
+            return "";
         }
 
         public static void GetMaterials()
@@ -317,13 +468,15 @@ namespace TwitchIntegrationScript
 
                 if (mrs[0].sharedMaterial != null)
                 {
-                    if (mrs[0].sharedMaterial.GetColor("_EmissionColor") == leftColor)
+                    if (mrs[0].sharedMaterial.name.Equals("LeftHandNoteMat"))
                     {
                         leftMaterial = mrs[0].sharedMaterial;
+                        leftColor = leftMaterial.GetColor("_EmissionColor");
                     }
-                    else if (mrs[0].sharedMaterial.GetColor("_EmissionColor") == rightColor)
+                    else if (mrs[0].sharedMaterial.name.Equals("RightHandNoteMat"))
                     {
                         rightMaterial = mrs[0].sharedMaterial;
+                        rightColor = rightMaterial.GetColor("_EmissionColor");
                     }
                 }
             }
@@ -334,46 +487,48 @@ namespace TwitchIntegrationScript
 
         private static void ColorCommand(float time, string user)
         {
-            if (modificationEnabled && inLevel && !colorRunning)
+            if (inLevel && !colorRunning)
             {
                 if (leftMaterial == null || rightMaterial == null || leftIndicator == null || rightIndicator == null)
                 {
                     GetMaterials();
                 }
 
-                SendChatMessage("Randomizing Color");
-                NameCommand(user, 20f);
-                colorTime = Time.time + time;
-                colorRunning = true;
+                if (leftMaterial != null || rightMaterial != null || leftIndicator != null || rightIndicator != null)
+                {
+                    SendChatMessage("Randomizing Color");
+                    NameCommand(user, time);
+                    colorTime = Time.time + time;
+                    colorRunning = true;
 
-                int rand = UnityEngine.Random.Range(0, 1000);
+                    int rand = UnityEngine.Random.Range(0, 1000);
 
-                Color col = Color.HSVToRGB(rand / 1000f, 1, 1);
+                    Color col = Color.HSVToRGB(rand / 1000f, 1, 1);
 
-                mleftColor = col;
-                leftMaterial.SetColor("_EmissionColor", col);
-                leftIndicator.SetColor("_EmissionColor", col);
+                    mleftColor = col;
+                    leftMaterial.SetColor("_EmissionColor", col);
+                    leftIndicator.SetColor("_EmissionColor", col);
 
-                rand = (rand + 611) % 1000;
-                col = Color.HSVToRGB(rand / 1000f, 1, 1);
+                    rand = (rand + 611) % 1000;
+                    col = Color.HSVToRGB(rand / 1000f, 1, 1);
 
-                mrightColor = col;
-                rightMaterial.SetColor("_EmissionColor", col);
-                rightIndicator.SetColor("_EmissionColor", col);
-
+                    mrightColor = col;
+                    rightMaterial.SetColor("_EmissionColor", col);
+                    rightIndicator.SetColor("_EmissionColor", col);
+                }
             }
             else
             {
-                SendChatMessage("Command disabled");
+                SendChatMessage("Command unavailable");
             }
         }
 
         public static void SpeedCommand(float speed, float time, string user)
         {
-            if (modificationEnabled && inLevel && !speedRunning)
+            if (inLevel && !speedRunning)
             {
                 SendChatMessage("Speed " + speed.ToString() + "x");
-                NameCommand(user, 10f / speed);
+                NameCommand(user, time / speed);
                 speedTime = Time.time + time;
                 speedRunning = true;
 
@@ -381,30 +536,44 @@ namespace TwitchIntegrationScript
             }
             else
             {
-                SendChatMessage("Command disabled");
+                SendChatMessage("Command unavailable");
             }
         }
 
         public static void NameCommand(string user, float time)
         {
-            nameTime = Time.time + time;
-            nameRunning = true;
+            if (settings.showUserText == true)
+            {
+                nameTime = Time.time + time;
+                nameRunning = true;
 
-            GameObject platform = GameObject.Find("HeadsetFollower");
-            userText.transform.position = platform.transform.position;
+                GameObject platform = GameObject.Find("HeadsetFollower");
+                userText.transform.position = platform.transform.position;
 
-            UserTextScript.SetText(user);
-            UserTextScript.ShowMe();
+                UserTextScript.SetText(user);
+                UserTextScript.ShowMe();
+            }
         }
 
         public static void SendChatMessage(string message)
         {
-            client.SendMessage(mycredentials.Channel, "[Bot] " + message);
+            if (settings.chatReply == true)
+            {
+                client.SendMessage(mycredentials.Channel, settings.botMessagePrefix + message);
+            }
         }
 
         public static void Disconnect()
         {
             client.Disconnect();
+
+            var dataPath = Application.dataPath;
+            var settingsPath = dataPath.Substring(0, dataPath.LastIndexOf('/')) + "/TwitchSettings.json";
+
+            using (StreamWriter streamWriter = new StreamWriter(settingsPath))
+            {
+                streamWriter.Write(JsonUtility.ToJson(settings, true));
+            }
         }
 
         private static void log(string str)

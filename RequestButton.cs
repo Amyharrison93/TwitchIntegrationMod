@@ -14,10 +14,13 @@ namespace TwitchIntegrationScript
         public Button button;
 
         public Button colorButton;
+        public Button speedButton;
+        public Button superspeedButton;
+        public Button timewarpButton;
+
+        public Button queueButton;
 
         public Text text;
-
-        public Text colorText;
 
         public GameObject wrapper;
 
@@ -83,6 +86,11 @@ namespace TwitchIntegrationScript
             DontDestroyOnLoad(this);
             button.onClick.AddListener(QueueNext);
             colorButton.onClick.AddListener(ToggleColor);
+            speedButton.onClick.AddListener(ToggleSpeed);
+            superspeedButton.onClick.AddListener(ToggleSuperspeed);
+            timewarpButton.onClick.AddListener(ToggleTimewarp);
+
+            queueButton.onClick.AddListener(ToggleQueue);
         }
 
         void Start()
@@ -164,15 +172,104 @@ namespace TwitchIntegrationScript
 
         public static void ToggleColor()
         {
-            TwitchBot.modificationEnabled = !TwitchBot.modificationEnabled;
+            TwitchBot.settings.colorEnabled = !TwitchBot.settings.colorEnabled;
+            UpdateButtons();
+        }
 
-            if (TwitchBot.modificationEnabled)
+        public static void ToggleSpeed()
+        {
+            TwitchBot.settings.speedEnabled = !TwitchBot.settings.speedEnabled;
+            UpdateButtons();
+        }
+
+        public static void ToggleSuperspeed()
+        {
+            TwitchBot.settings.superspeedEnabled = !TwitchBot.settings.superspeedEnabled;
+            UpdateButtons();
+        }
+
+        public static void ToggleTimewarp()
+        {
+            TwitchBot.settings.timewarpEnabled = !TwitchBot.settings.timewarpEnabled;
+            UpdateButtons();
+        }
+
+        public static void ToggleQueue()
+        {
+            TwitchBot.settings.queueEnabled = !TwitchBot.settings.queueEnabled;
+            UpdateButtons();
+        }
+
+        public static void UpdateButtons()
+        {
+            if (TwitchBot.settings.colorEnabled)
             {
-                s_instance.colorText.text = "!Mods on";
+                var colors = s_instance.colorButton.colors;
+                colors.normalColor = new Color(0, 1f, 1f);
+                s_instance.colorButton.colors = colors;
+
             }
             else
             {
-                s_instance.colorText.text = "!Mods off";
+                var colors = s_instance.colorButton.colors;
+                colors.normalColor = new Color(0, 0.3f, 0.4f);
+                s_instance.colorButton.colors = colors;
+            }
+
+            if (TwitchBot.settings.speedEnabled)
+            {
+                var colors = s_instance.speedButton.colors;
+                colors.normalColor = new Color(0, 1f, 1f);
+                s_instance.speedButton.colors = colors;
+
+            }
+            else
+            {
+                var colors = s_instance.speedButton.colors;
+                colors.normalColor = new Color(0, 0.3f, 0.4f);
+                s_instance.speedButton.colors = colors;
+            }
+
+            if (TwitchBot.settings.superspeedEnabled)
+            {
+                var colors = s_instance.superspeedButton.colors;
+                colors.normalColor = new Color(0, 1f, 1f);
+                s_instance.superspeedButton.colors = colors;
+
+            }
+            else
+            {
+                var colors = s_instance.superspeedButton.colors;
+                colors.normalColor = new Color(0, 0.3f, 0.4f);
+                s_instance.superspeedButton.colors = colors;
+            }
+
+            if (TwitchBot.settings.timewarpEnabled)
+            {
+                var colors = s_instance.timewarpButton.colors;
+                colors.normalColor = new Color(0, 1f, 1f);
+                s_instance.timewarpButton.colors = colors;
+
+            }
+            else
+            {
+                var colors = s_instance.timewarpButton.colors;
+                colors.normalColor = new Color(0, 0.3f, 0.4f);
+                s_instance.timewarpButton.colors = colors;
+            }
+
+            if (TwitchBot.settings.queueEnabled)
+            {
+                var colors = s_instance.queueButton.colors;
+                colors.normalColor = new Color(0, 1f, 1f);
+                s_instance.queueButton.colors = colors;
+
+            }
+            else
+            {
+                var colors = s_instance.queueButton.colors;
+                colors.normalColor = new Color(0, 0.3f, 0.4f);
+                s_instance.queueButton.colors = colors;
             }
         }
 
