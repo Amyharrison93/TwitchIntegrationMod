@@ -209,8 +209,8 @@ namespace TwitchIntegrationScript
                         log("Add: " + e.Command.ArgumentsAsString);
                         AddRequest(e.Command.ArgumentsAsList);
                         break;
-                    case "next":
-                        log("Next: " + e.Command.ArgumentsAsString);
+                    case "top":
+                        log("Top: " + e.Command.ArgumentsAsString);
                         QueueNext(e.Command.ArgumentsAsList);
                         break;
                     case "remove":
@@ -563,12 +563,21 @@ namespace TwitchIntegrationScript
             }
         }
 
+        public void OnDestroy()
+        {
+            Disconnect();
+        }
+
         public static void Disconnect()
         {
             client.Disconnect();
 
             var dataPath = Application.dataPath;
             var settingsPath = dataPath.Substring(0, dataPath.LastIndexOf('/')) + "/TwitchSettings.json";
+
+            client.OnChatCommandReceived -= OnChatCommandReceived;
+            client.OnMessageReceived -= OnMessageReceived;
+            client.OnLog -= OnLog;
 
             using (StreamWriter streamWriter = new StreamWriter(settingsPath))
             {
