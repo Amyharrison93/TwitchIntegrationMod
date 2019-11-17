@@ -52,7 +52,7 @@ namespace TwitchIntegrationScript
             TwitchBot.tracks = new List<string>();
             foreach (TrackData t in tracks)
             {
-                TwitchBot.tracks.Add(t.name.ToLower());
+                TwitchBot.tracks.Add(t.name);
             }
         }
 

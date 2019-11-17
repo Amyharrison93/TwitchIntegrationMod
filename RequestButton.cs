@@ -145,7 +145,7 @@ namespace TwitchIntegrationScript
             {
                 foreach (TrackData t in s_instance.tracks)
                 {
-                    if (t.name.Equals(TwitchBot.queue[0]))
+                    if (t.name.ToLower().Equals(TwitchBot.queue[0].ToLower()))
                     {
                         int index = s_instance.tracks.IndexOf(t);
                         if (index >= 0)

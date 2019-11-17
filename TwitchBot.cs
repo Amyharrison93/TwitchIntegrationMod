@@ -393,15 +393,15 @@ namespace TwitchIntegrationScript
                     string par = "";
                     for (int i = 0; i < request.Count - 1; i++)
                     {
-                        par += request[i].ToLower() + " ";
+                        par += request[i] + " ";
                     }
-                    par += request[request.Count - 1].ToLower();
+                    par += request[request.Count - 1];
 
                     int lastTrackSearchScore = 0;
                     List<string> c = new List<string>();
                     foreach (string t in tracks)
                     {
-                        if (t.Equals(par))
+                        if (t.ToLower().Equals(par.ToLower()))
                         {
                             return par;
                         }
@@ -409,7 +409,7 @@ namespace TwitchIntegrationScript
                         int x = 0;
                         foreach (string s in request)
                         {
-                            if (t.Contains(s.ToLower()))
+                            if (t.ToLower().Contains(s.ToLower()))
                             {
                                 x++;
                             }
