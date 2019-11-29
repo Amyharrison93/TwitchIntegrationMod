@@ -52,6 +52,7 @@ namespace TwitchIntegrationScript
 
         public static Action<float> setPitchCallback;
         public static Action looseLifeCallback;
+        public static Action disableScoreCallback;
 
         public static TwitchBot s_instance;
 
@@ -136,15 +137,6 @@ namespace TwitchIntegrationScript
         {
             if (s_instance == null) { return; }
 
-            if (mleftColor != null && mrightColor != null && leftIndicator != null && rightIndicator != null)
-            {
-                if (leftIndicator.GetColor("_EmissionColor") != mleftColor || rightIndicator.GetColor("_EmissionColor") != mrightColor)
-                {
-                    leftIndicator.SetColor("_EmissionColor", mleftColor);
-                    rightIndicator.SetColor("_EmissionColor", mrightColor);
-                }
-            }
-
             float time = Time.time;
 
             if (colorRunning)
@@ -156,8 +148,9 @@ namespace TwitchIntegrationScript
                         GetMaterials();
                     }
 
-                    if (leftMaterial != null || rightMaterial != null || leftIndicator != null || rightIndicator != null)
+                    else
                     {
+                        colorRunning = false;
                         mleftColor = leftColor;
                         leftMaterial.SetColor("_EmissionColor", leftColor);
                         leftIndicator.SetColor("_EmissionColor", leftColor);
@@ -165,24 +158,34 @@ namespace TwitchIntegrationScript
                         mrightColor = rightColor;
                         rightMaterial.SetColor("_EmissionColor", rightColor);
                         rightIndicator.SetColor("_EmissionColor", rightColor);
-                        colorRunning = false;
                     }
                 }
             }
+
             if (speedRunning)
             {
                 if (speedTime - time < 0 && speedTime - time > -60)
                 {
-                    setPitchCallback(1f);
                     speedRunning = false;
+                    setPitchCallback(1f);
                 }
             }
+
             if (nameRunning)
             {
                 if (nameTime - time < 0 && nameTime - time > -60)
                 {
-                    UserTextScript.HideMe();
                     nameRunning = false;
+                    UserTextScript.HideMe();
+                }
+            }
+
+            if (mleftColor != null && mrightColor != null && leftIndicator != null && rightIndicator != null)
+            {
+                if (leftIndicator.GetColor("_EmissionColor") != mleftColor || rightIndicator.GetColor("_EmissionColor") != mrightColor)
+                {
+                    leftIndicator.SetColor("_EmissionColor", mleftColor);
+                    rightIndicator.SetColor("_EmissionColor", mrightColor);
                 }
             }
         }
@@ -471,12 +474,18 @@ namespace TwitchIntegrationScript
                     if (mrs[0].sharedMaterial.name.Equals("LeftHandNoteMat"))
                     {
                         leftMaterial = mrs[0].sharedMaterial;
-                        leftColor = leftMaterial.GetColor("_EmissionColor");
+                        if (leftColor == null)
+                        {
+                            leftColor = leftMaterial.GetColor("_EmissionColor");
+                        }
                     }
                     else if (mrs[0].sharedMaterial.name.Equals("RightHandNoteMat"))
                     {
                         rightMaterial = mrs[0].sharedMaterial;
-                        rightColor = rightMaterial.GetColor("_EmissionColor");
+                        if (rightColor == null)
+                        {
+                            rightColor = rightMaterial.GetColor("_EmissionColor");
+                        }
                     }
                 }
             }
@@ -527,6 +536,11 @@ namespace TwitchIntegrationScript
         {
             if (inLevel && !speedRunning)
             {
+                if (speed < 1)
+                {
+                    disableScoreCallback();
+                }
+
                 SendChatMessage("Speed " + speed.ToString() + "x");
                 NameCommand(user, time / speed);
                 speedTime = Time.time + time;

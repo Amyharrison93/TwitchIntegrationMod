@@ -170,5 +170,10 @@ namespace TwitchIntegrationScript
         {
             TwitchBot.setPitchCallback = callback;
         }
+
+        public void SetDisableScoreUploadCallback(Action callback)
+        {
+            TwitchBot.disableScoreCallback = callback;
+        }
     }
 }
