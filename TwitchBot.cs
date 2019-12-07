@@ -143,7 +143,7 @@ namespace TwitchIntegrationScript
             {
                 if (colorTime - time < 0 && colorTime - time > -60)
                 {
-                    if (leftMaterial == null || rightMaterial == null || leftIndicator == null || rightIndicator == null)
+                    if (leftMaterial == null || rightMaterial == null || leftIndicator == null || rightIndicator == null || leftColor == null || rightColor == null)
                     {
                         GetMaterials();
                     }
@@ -474,18 +474,12 @@ namespace TwitchIntegrationScript
                     if (mrs[0].sharedMaterial.name.Equals("LeftHandNoteMat"))
                     {
                         leftMaterial = mrs[0].sharedMaterial;
-                        if (leftColor == null)
-                        {
-                            leftColor = leftMaterial.GetColor("_EmissionColor");
-                        }
+                        leftColor = leftMaterial.GetColor("_EmissionColor");
                     }
                     else if (mrs[0].sharedMaterial.name.Equals("RightHandNoteMat"))
                     {
                         rightMaterial = mrs[0].sharedMaterial;
-                        if (rightColor == null)
-                        {
-                            rightColor = rightMaterial.GetColor("_EmissionColor");
-                        }
+                        rightColor = rightMaterial.GetColor("_EmissionColor");
                     }
                 }
             }
